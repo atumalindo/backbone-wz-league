@@ -35,7 +35,13 @@ export const Bot = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
-const Rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN || "");
+export function GetDiscordToken(): string {
+  return String(process.env.BOT_TOKEN || process.env.DISCORD_TOKEN || "")
+    .trim()
+    .replace(/^Bot\s+/i, "");
+}
+
+const Rest = new REST({ version: "10" }).setToken(GetDiscordToken());
 
 const mapChoices = [
   { name: "Disco Drop ", value: "Disco Drop" },
