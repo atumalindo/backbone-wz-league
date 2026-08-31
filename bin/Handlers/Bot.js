@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bot = void 0;
+exports.GetDiscordToken = GetDiscordToken;
 const tslib_1 = require("tslib");
 const discord_js_1 = require("discord.js");
 const fs = tslib_1.__importStar(require("fs"));
@@ -22,7 +23,12 @@ const Logger_1 = require("../Modules/Logger");
 exports.Bot = new discord_js_1.Client({
     intents: [discord_js_1.GatewayIntentBits.Guilds],
 });
-const Rest = new discord_js_1.REST({ version: "10" }).setToken(process.env.BOT_TOKEN || "");
+function GetDiscordToken() {
+    return String(process.env.BOT_TOKEN || process.env.DISCORD_TOKEN || "")
+        .trim()
+        .replace(/^Bot\s+/i, "");
+}
+const Rest = new discord_js_1.REST({ version: "10" }).setToken(GetDiscordToken());
 const mapChoices = [
     { name: "Disco Drop ", value: "Disco Drop" },
     { name: "Block Dash", value: "Block Dash" },
