@@ -114,8 +114,12 @@ async function LoadRoutes(Dir, Routes = []) {
 }
 async function Start() {
     const RoutesDir = path_1.default.join(".", Symbol.for("ts-node.register.instance") in process ? "Source" : "bin", "Routes");
+    const DatabaseUri = String(process.env.DATABASE_URI || process.env.MONGODB_URI || process.env.mongoUri || "").trim();
+    if (!DatabaseUri) {
+        throw new Error("DATABASE_URI (ou MONGODB_URI) precisa ser configurado antes de iniciar o Backbone");
+    }
     const [DbConnection, RoutesList] = await Promise.all([
-        mongoose_1.default.connect(process.env.DATABASE_URI || "", {
+        mongoose_1.default.connect(DatabaseUri, {
             tls: true,
             ...(process.env.MONGO_ALLOW_INVALID_TLS === "true" ? { tlsAllowInvalidCertificates: true, rejectUnauthorized: false } : {}),
             heartbeatFrequencyMS: 10000,
@@ -145,7 +149,11 @@ async function Start() {
         Res.error(Errors_1.E_ServerError);
     });
     (0, Logger_1.msg)(`Connected to ${(0, colorette_1.gray)(Constants_1.PROJECT_NAME)} database`);
-    await Bot_1.Bot.login(process.env.BOT_TOKEN);
+    const DiscordToken = (0, Bot_1.GetDiscordToken)();
+    if (!DiscordToken) {
+        throw new Error("BOT_TOKEN (ou DISCORD_TOKEN) precisa ser configurado no Backbone");
+    }
+    await Bot_1.Bot.login(DiscordToken);
     exports.App.listen(Constants_1.PORT, () => {
         const [Start, End] = MakeGradient();
         (0, Resolving_1.StartLoop)();
