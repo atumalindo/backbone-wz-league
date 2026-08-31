@@ -1,0 +1,59 @@
+{
+  "name": "millenium",
+  "version": "1.0.0",
+  "description": "StumbleCats Backend Exploiter.",
+  "main": "bin/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node bin/index.js",
+    "dev": "ts-node Source/index",
+    "dev:watch": "nodemon -x ts-node Source/index",
+    "check": "tsc --noEmit",
+    "test:rules": "npm run build && node tests/tournament-rules.test.js",
+    "test:regression": "node tests/tournament-data-regression.test.js",
+    "lint": "prettier --check ./Source && eslint ./Source --ext .ts",
+    "format": "prettier --write ./Source && eslint ./Source --ext .ts --fix"
+  },
+  "nodemonConfig": {
+    "ext": "*.ts,*.json,*.env",
+    "ignore": [
+      "bin/**",
+      "thunder_tests/**"
+    ]
+  },
+  "author": "ash",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.38.0",
+    "@types/cors": "^2.8.17",
+    "@types/crypto-js": "^4.2.2",
+    "@types/express": "^4.17.18",
+    "@types/node": "^20.19.25",
+    "eslint": "^9.38.0",
+    "globals": "^16.4.0",
+    "jiti": "^2.6.1",
+    "ts-node": "^10.9.2",
+    "tslib": "^2.6.2",
+    "typescript-eslint": "^8.46.1"
+  },
+  "dependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "axios": "^1.12.2",
+    "colorette": "^2.0.20",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "crypto-js": "^4.2.0",
+    "discord.js": "^14.25.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1",
+    "fast-xml-parser": "^5.3.0",
+    "helmet": "^8.1.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.1",
+    "typescript": "^5.9.2",
+    "uuid": "^13.0.0"
+  },
+  "keywords": []
+}
