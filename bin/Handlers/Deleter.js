@@ -15,8 +15,12 @@ class TournamentCleaner {
     static async Clean() {
         const FiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
         const TwoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-        // A remoção por idade é independente do status: torneios ativos também expiram após 2h.
-        const ExpiredByAge = await Tournament_1.Tournament.find({ CreatedAt: { $lte: TwoHoursAgo } }).lean();
+        // A idade só pode ser usada como critério adicional para estados encerrados.
+        // Torneios ativos não devem desaparecer da lista depois de duas horas.
+        const ExpiredByAge = await Tournament_1.Tournament.find({
+            Status: { $in: [Config_1.TournamentStatus.Finished, Config_1.TournamentStatus.Canceled] },
+            CreatedAt: { $lte: TwoHoursAgo },
+        }).lean();
         const Finished = await Tournament_1.Tournament.find({ Status: Config_1.TournamentStatus.Finished }).lean();
         const Candidates = Array.from(new Map([...ExpiredByAge, ...Finished].map((tour) => [String(tour.TournamentId), tour])).values());
         for (const Tour of Candidates) {
@@ -24,11 +28,13 @@ class TournamentCleaner {
                 const TournamentId = Tour.TournamentId.toString();
                 const props = Tour.Properties || {};
                 const finishedAtRaw = props.FinishedAt;
-                let shouldDelete = Boolean(Tour.CreatedAt && new Date(Tour.CreatedAt) <= TwoHoursAgo);
+                let shouldDelete = Boolean(Tour.CreatedAt &&
+                    Tour.CreatedAt <= TwoHoursAgo &&
+                    (Tour.Status === Config_1.TournamentStatus.Finished || Tour.Status === Config_1.TournamentStatus.Canceled));
                 if (shouldDelete) {
-                    // A regra de duas horas tem prioridade e não depende de vencedor/status.
+                    // Estados encerrados antigos podem ser removidos por idade.
                 }
-                else if (finishedAtRaw) {
+                else if (finishedAtRaw && (Tour.Status === Config_1.TournamentStatus.Finished || Tour.Status === Config_1.TournamentStatus.Canceled)) {
                     const finishedAt = new Date(finishedAtRaw);
                     if (finishedAt < FiveMinsAgo) {
                         shouldDelete = true;
@@ -44,9 +50,10 @@ class TournamentCleaner {
                         .sort({ roundid: -1 })
                         .select("deadline status")
                         .lean();
-                    if (!LastMatch ||
-                        (new Date(LastMatch.deadline) < FiveMinsAgo &&
-                            (LastMatch.status === 8 || LastMatch.status === 7))) {
+                    if (Tour.Status === Config_1.TournamentStatus.Finished &&
+                        (!LastMatch ||
+                            (new Date(LastMatch.deadline) < FiveMinsAgo &&
+                                (LastMatch.status === 8 || LastMatch.status === 7)))) {
                         shouldDelete = true;
                     }
                 }
