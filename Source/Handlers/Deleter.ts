@@ -15,8 +15,12 @@ export class TournamentCleaner {
     const FiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
     const TwoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
-    // A remoção por idade é independente do status: torneios ativos também expiram após 2h.
-    const ExpiredByAge = await Tournament.find({ CreatedAt: { $lte: TwoHoursAgo } }).lean();
+    // A idade só pode ser usada como critério adicional para estados encerrados.
+    // Torneios ativos não devem desaparecer da lista depois de duas horas.
+    const ExpiredByAge = await Tournament.find({
+      Status: { $in: [TournamentStatus.Finished, TournamentStatus.Canceled] },
+      CreatedAt: { $lte: TwoHoursAgo },
+    }).lean();
     const Finished = await Tournament.find({ Status: TournamentStatus.Finished }).lean();
     const Candidates = Array.from(
       new Map([...ExpiredByAge, ...Finished].map((tour: any) => [String(tour.TournamentId), tour])).values()
@@ -28,11 +32,15 @@ export class TournamentCleaner {
         const props = (Tour as any).Properties || {};
         const finishedAtRaw = props.FinishedAt;
 
-        let shouldDelete = Boolean((Tour as any).CreatedAt && new Date((Tour as any).CreatedAt) <= TwoHoursAgo);
+        let shouldDelete = Boolean(
+          (Tour as any).CreatedAt &&
+          (Tour as any).CreatedAt <= TwoHoursAgo &&
+          ((Tour as any).Status === TournamentStatus.Finished || (Tour as any).Status === TournamentStatus.Canceled)
+        );
 
         if (shouldDelete) {
-          // A regra de duas horas tem prioridade e não depende de vencedor/status.
-        } else if (finishedAtRaw) {
+          // Estados encerrados antigos podem ser removidos por idade.
+        } else if (finishedAtRaw && ((Tour as any).Status === TournamentStatus.Finished || (Tour as any).Status === TournamentStatus.Canceled)) {
           const finishedAt = new Date(finishedAtRaw);
           if (finishedAt < FiveMinsAgo) {
             shouldDelete = true;
@@ -49,9 +57,10 @@ export class TournamentCleaner {
             .lean();
 
           if (
-            !LastMatch ||
-            (new Date(LastMatch.deadline) < FiveMinsAgo &&
-              (LastMatch.status === 8 || LastMatch.status === 7))
+            (Tour as any).Status === TournamentStatus.Finished &&
+            (!LastMatch ||
+              (new Date(LastMatch.deadline) < FiveMinsAgo &&
+                (LastMatch.status === 8 || LastMatch.status === 7)))
           ) {
             shouldDelete = true;
           }
