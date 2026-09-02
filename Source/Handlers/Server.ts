@@ -19,9 +19,27 @@ import { TournamentCleaner } from "./Deleter";
 const AllowedOrigins = new Set(
   String(process.env.BACKBONE_ALLOWED_ORIGINS || "")
     .split(/[\s,]+/)
-    .map((value) => value.trim())
+    .map((value) => value.trim().replace(/\/$/, ""))
     .filter(Boolean)
 );
+
+const CorsOptions = {
+  origin(origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) {
+    // Requests without an Origin (health checks, curl and server-to-server calls) are safe.
+    if (!origin) return callback(null, true);
+
+    // In development/staging, an empty allowlist keeps local frontend development working.
+    if (AllowedOrigins.size === 0 && IS_DEBUG) return callback(null, true);
+
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    if (AllowedOrigins.has(normalizedOrigin)) return callback(null, true);
+
+    console.warn(`[CORS] Origin not allowed: ${origin}`);
+    return callback(null, false);
+  },
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
 
 export const App = e()
   .disable("etag")
@@ -29,12 +47,8 @@ export const App = e()
   .use(helmet())
   .use(e.json({ limit: BODY_SIZE_LIMIT }))
   .use(e.urlencoded({ limit: BODY_SIZE_LIMIT, extended: false }))
-  .use(cors({
-    origin(origin, callback) {
-      if (!origin || AllowedOrigins.size === 0 && IS_DEBUG || (origin && AllowedOrigins.has(origin))) return callback(null, true);
-      return callback(new Error("Origin not allowed"));
-    },
-  }));
+  .use(cors(CorsOptions))
+  .options("*", cors(CorsOptions));
 // .use(EncryptResponse);
 
 function createDate(year: number, month: number, day: number, hours: number, minutes: number = 0): Date {
@@ -141,6 +155,8 @@ async function Start() {
       tls: true,
       ...(process.env.MONGO_ALLOW_INVALID_TLS === "true" ? { tlsAllowInvalidCertificates: true, rejectUnauthorized: false } : {}),
       heartbeatFrequencyMS: 10000,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
       family: 4,
     }),
     LoadRoutes(RoutesDir),
