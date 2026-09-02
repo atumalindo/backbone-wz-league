@@ -3,9 +3,30 @@ import { GetTournamentList } from "../../Backbone/Logic/TournamentList";
 
 const App = Router();
 
+const TOURNAMENT_LIST_TIMEOUT_MS = 9000;
+
 function dateOrNow(value: unknown): Date {
   const date = value instanceof Date ? value : new Date(String(value ?? ""));
   return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function WithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Tournament list timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
 }
 
 async function sendTournamentList(req: any, res: any) {
@@ -16,12 +37,15 @@ async function sendTournamentList(req: any, res: any) {
         req.headers?.access_token ??
         ""
     );
-    const data = await GetTournamentList(
-      20,
-      1,
-      accessToken,
-      dateOrNow(req.body?.sinceDate ?? req.body?.since_date),
-      dateOrNow(req.body?.untilDate ?? req.body?.until_date)
+    const data = await WithTimeout(
+      GetTournamentList(
+        20,
+        1,
+        accessToken,
+        dateOrNow(req.body?.sinceDate ?? req.body?.since_date),
+        dateOrNow(req.body?.untilDate ?? req.body?.until_date)
+      ),
+      TOURNAMENT_LIST_TIMEOUT_MS
     );
 
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
@@ -29,7 +53,9 @@ async function sendTournamentList(req: any, res: any) {
     return res.status(200).json(data);
   } catch (error) {
     console.error("[GetListV1] error:", error);
-    // Always finish the request with the shape expected by the native client.
+    // A native client that receives a valid empty payload can leave the
+    // loading state and show its normal "no tournaments" message. This is
+    // safer than leaving the request pending when Mongo or a query stalls.
     return res.status(200).json({
       pagination: { currentPage: 1, maxResults: 20, totalResultCount: 0 },
       tournaments: [],
