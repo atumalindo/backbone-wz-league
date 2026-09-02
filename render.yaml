@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: backbone-wz-league
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health/check
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: ENVIRONMENT
+        value: production
+      - key: SERVICE_TYPE
+        value: ALL
+      - key: PORT
+        value: 10000
+      - key: BACKBONE_ALLOWED_ORIGINS
+        sync: false
+      - key: DATABASE_URI
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: JWT_SECRET
+        sync: false
