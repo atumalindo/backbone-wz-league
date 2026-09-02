@@ -3,13 +3,16 @@ services:
     name: backbone-wz-league
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build
+    # Remove bin/ antigo antes de compilar para nunca reutilizar o servidor/site errado.
+    buildCommand: rm -rf bin && npm ci --ignore-scripts && npm run build
     startCommand: npm start
     healthCheckPath: /api/health/check
     envVars:
       - key: NODE_VERSION
         value: 22
       - key: ENVIRONMENT
+        value: production
+      - key: NODE_ENV
         value: production
       - key: SERVICE_TYPE
         value: ALL
