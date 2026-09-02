@@ -117,7 +117,7 @@ async function LoadRoutes(
             Routes.push({ Path: Entry.name, Module: Module.default });
           }
         } catch (Err) {
-          warn(`Failed loading ${italic(Entry.name)}: ${(Err as Error).message}`);
+          warn(`Failed loading ${italic(FullPath)}: ${(Err as Error).message}`);
         }
       }
     })
@@ -127,7 +127,10 @@ async function LoadRoutes(
 }
 
 async function Start() {
-  const RoutesDir = path.join(".", Symbol.for("ts-node.register.instance") in process ? "Source" : "bin", "Routes");
+  // Resolve a partir do servidor executado, não do current working directory.
+  // Isso evita que Render/Discloud procure as rotas em uma pasta errada.
+  const RoutesDir = path.resolve(__dirname, "..", "Routes");
+  console.log(`[Server] Loading routes from ${RoutesDir}`);
   const DatabaseUri = String(process.env.DATABASE_URI || process.env.MONGODB_URI || process.env.mongoUri || "").trim();
   if (!DatabaseUri) {
     throw new Error("DATABASE_URI (ou MONGODB_URI) precisa ser configurado antes de iniciar o Backbone");
