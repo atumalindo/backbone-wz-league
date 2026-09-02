@@ -5,6 +5,7 @@
   "main": "bin/index.js",
   "scripts": {
     "build": "tsc",
+    "postinstall": "npm run build",
     "start": "node bin/index.js",
     "dev": "ts-node Source/index",
     "dev:watch": "nodemon -x ts-node Source/index",
